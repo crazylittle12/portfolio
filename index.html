@@ -70,17 +70,14 @@
     overflow-x: hidden;
   }
 
-  /* Background grid */
-  body::before {
-    content: "";
+  /* Cursor-reactive dot grid — rendered to #dotGrid canvas via JS */
+  #dotGrid {
     position: fixed; inset: 0;
-    background-image:
-      linear-gradient(to right, oklch(0.30 0.012 250 / 0.08) 1px, transparent 1px),
-      linear-gradient(to bottom, oklch(0.30 0.012 250 / 0.08) 1px, transparent 1px);
-    background-size: 56px 56px;
-    mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 80%);
+    width: 100%; height: 100%;
     pointer-events: none;
     z-index: 0;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 80%);
+    mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 80%);
   }
   /* Noise overlay */
   body::after {
@@ -239,9 +236,47 @@
     .hamburger { display: flex; }
   }
 
+  /* ====== LOG STREAM ====== */
+  .log-stream {
+    position: absolute; top: 0; right: 0;
+    width: 320px; height: 100%;
+    z-index: 0; overflow: hidden;
+    pointer-events: none;
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0%, #000 28%),
+      linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
+    -webkit-mask-composite: destination-in;
+    mask-image:
+      linear-gradient(to right, transparent 0%, #000 28%),
+      linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
+    mask-composite: intersect;
+  }
+  .log-track {
+    display: flex; flex-direction: column;
+    animation: logScroll 60s linear infinite;
+  }
+  .log-line {
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.8;
+    color: var(--text-mute);
+    opacity: 0.06;
+    white-space: nowrap;
+    user-select: none;
+  }
+  @keyframes logScroll {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-50%); }
+  }
+  @media (max-width: 900px) { .log-stream { display: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .log-track { animation-play-state: paused; }
+  }
+
   /* ====== HERO ====== */
   section.hero {
     padding: clamp(60px, 11vh, 140px) 0 clamp(50px, 9vh, 110px);
+    position: relative;
   }
   .eyebrow {
     display: inline-flex; align-items: center; gap: 10px;
@@ -540,15 +575,28 @@
   .chat .u   { color: var(--text-dim); }
 
   /* ====== TOOLS ====== */
-  .tools-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 10px;
+  .tools-carousel {
+    overflow: hidden;
+    padding: 18px 0;   /* vertical room so scaled cards don't get clipped */
+    margin: -18px 0;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
   }
-  @media (max-width: 920px) { .tools-grid { grid-template-columns: repeat(4, 1fr); } }
-  @media (max-width: 480px)  { .tools-grid { grid-template-columns: repeat(3, 1fr); } }
+  .tools-track {
+    display: flex;
+    gap: 12px;
+    width: max-content;
+    animation: marquee 42s linear infinite;
+  }
+  .tools-track:hover { animation-play-state: paused; }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
   .tool {
-    aspect-ratio: 1 / 1;
+    width: 112px;
+    height: 112px;
+    flex-shrink: 0;
     background: var(--panel);
     border: 1px solid var(--line-soft);
     border-radius: 12px;
@@ -562,9 +610,40 @@
   .tool:hover {
     border-color: var(--accent);
     background: linear-gradient(180deg, var(--panel-2), var(--panel));
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px -8px oklch(0.10 0.005 250 / 0.6);
+    transform: scale(1.2);
+    z-index: 10;
+    box-shadow: 0 16px 40px -8px oklch(0.08 0.005 250 / 0.9), 0 0 24px -4px var(--accent-glow);
   }
+
+  /* Glyph animation keyframes */
+  @keyframes glyphBounce {
+    from { transform: translateY(0);    }
+    to   { transform: translateY(-6px); }
+  }
+  @keyframes glyphWobble {
+    0%, 100% { transform: rotate(0deg);   }
+    25%       { transform: rotate(-14deg); }
+    75%       { transform: rotate(14deg);  }
+  }
+  @keyframes glyphPulse {
+    0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0   var(--accent-glow); }
+    50%       { transform: scale(1.12); box-shadow: 0 0 0 10px transparent;       }
+  }
+  @keyframes glyphFloat {
+    0%, 100% { transform: translateY(0);    }
+    50%       { transform: translateY(-5px); }
+  }
+  @keyframes glyphShake {
+    0%, 100% { transform: rotate(0deg);   }
+    25%       { transform: rotate(-14deg); }
+    75%       { transform: rotate(14deg);  }
+  }
+
+  .tool[data-anim="bounce"]:hover .glyph { animation: glyphBounce 0.42s ease-in-out infinite alternate; }
+  .tool[data-anim="wobble"]:hover .glyph { animation: glyphWobble 0.6s  ease-in-out infinite;           }
+  .tool[data-anim="pulse"]:hover  .glyph { animation: glyphPulse  1.0s  ease-in-out infinite;           }
+  .tool[data-anim="float"]:hover  .glyph { animation: glyphFloat  1.8s  ease-in-out infinite;           }
+  .tool[data-anim="shake"]:hover  .glyph { animation: glyphShake  0.3s  ease-in-out infinite;           }
   .tool .glyph {
     width: 32px; height: 32px;
     border-radius: 8px;
@@ -891,6 +970,7 @@
 
 <!-- ===================== HERO ===================== -->
 <section class="hero" aria-labelledby="hero-heading">
+  <div class="log-stream" aria-hidden="true"><div class="log-track" id="logTrack"></div></div>
   <div class="container">
     <div class="eyebrow hero-reveal" data-d="0">
       <span class="status-dot" aria-hidden="true"></span>
@@ -1132,7 +1212,9 @@
       </div>
       <p class="section-sub">A working stack — picked because it solves a real problem, not because it's trendy.</p>
     </div>
-    <div class="tools-grid" id="toolsGrid" role="list" aria-label="Tech stack"></div>
+    <div class="tools-carousel">
+      <div class="tools-track" id="toolsGrid" role="list" aria-label="Tech stack"></div>
+    </div>
   </div>
 </section>
 
@@ -1274,27 +1356,142 @@
 (function () {
   'use strict';
 
+  // ── Cursor-reactive dot grid ─────────────────────────────────
+  (function () {
+    var canvas = document.createElement('canvas');
+    canvas.id = 'dotGrid';
+    document.body.insertBefore(canvas, document.body.firstChild);
+    var ctx = canvas.getContext('2d');
+
+    var SPACING = 32, BASE_R = 2, REACH = 180;
+    var BASE_COL = [55, 62, 80], ACC_COL = [0, 255, 136], BASE_A = 0.20;
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var mx = -999, my = -999, dots = [];
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+      dots = [];
+      var cols = Math.ceil(canvas.width  / SPACING) + 1;
+      var rows = Math.ceil(canvas.height / SPACING) + 1;
+      for (var r = 0; r < rows; r++)
+        for (var c = 0; c < cols; c++)
+          dots.push([c * SPACING, r * SPACING]);
+    }
+
+    function ss(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
+
+    function draw() {
+      requestAnimationFrame(draw);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (var i = 0; i < dots.length; i++) {
+        var x = dots[i][0], y = dots[i][1];
+        var dist = Math.hypot(x - mx, y - my);
+        var f = (reduceMotion || dist > REACH) ? 0 : ss(1 - dist / REACH);
+        var radius = BASE_R + f * 2;
+        var cr = Math.round(BASE_COL[0] + f * (ACC_COL[0] - BASE_COL[0]));
+        var cg = Math.round(BASE_COL[1] + f * (ACC_COL[1] - BASE_COL[1]));
+        var cb = Math.round(BASE_COL[2] + f * (ACC_COL[2] - BASE_COL[2]));
+        var ca = BASE_A + f * 0.55;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + ca + ')';
+        ctx.fill();
+      }
+    }
+
+    if (!reduceMotion) {
+      window.addEventListener('mousemove', function (e) { mx = e.clientX; my = e.clientY; });
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    draw();
+  })();
+
+  // ── Terminal log stream ───────────────────────────────────────
+  (function () {
+    var track = document.getElementById('logTrack');
+    if (!track) return;
+
+    var pool = [
+      'webhook.received → ghl.contact.create ✓',
+      'stripe.payment.success → airtable.row.insert ✓',
+      'claude.code.invoke → captions.generated ✓',
+      'zapier.trigger → activecampaign.tag.add ✓',
+      'typeform.submit → ghl.pipeline.advance ✓',
+      'skool.member.join → welcome.sequence.start ✓',
+      'stripe.checkout.complete → zapier.workflow.run ✓',
+      'fillout.form.submit → airtable.record.create ✓',
+      'ghl.appointment.booked → reminder.sequence.start ✓',
+      'webhook.received → clickup.task.create ✓',
+      'claude.code.invoke → report.generated ✓',
+      'activecampaign.tag.added → ghl.workflow.trigger ✓',
+      'airtable.record.updated → clickup.task.update ✓',
+      'manychat.flow.complete → airtable.row.update ✓',
+      'ghl.contact.created → activecampaign.list.add ✓',
+      'zoho.lead.created → zapier.route → ghl ✓',
+      'claude.code.invoke → dashboard.refresh ✓',
+      'typeform.response → google.sheets.append ✓',
+      'fireflies.transcript → claude.code.summarize ✓',
+      'make.scenario.run → reports.exported ✓',
+      'activecampaign.email.opened → ghl.tag.update ✓',
+      'claude.code.invoke → lead.score.update ✓',
+      'zapier.schedule ⟳ → airtable.cleanup.run',
+      'ghl.pipeline.stage.change → email.sequence.trigger ✓',
+      'clickup.task.complete → ghl.contact.advance ✓',
+      'stripe.refund.issued → ghl.contact.tag ✓',
+      'zapier.trigger ↻ → scheduled.batch.process',
+      'webhook.received → stripe.subscription.check ✓',
+      'skool.post.created → notification.send ✓',
+      'airtable.view.filter → clickup.task.create ✓',
+    ];
+
+    var h = 14, m = 2, s = 0;
+    function nextTs() {
+      s += 2 + Math.floor(Math.random() * 8);
+      if (s >= 60) { s -= 60; m++; }
+      if (m >= 60) { m = 0; h = (h + 1) % 24; }
+      return '[' + pad(h) + ':' + pad(m) + ':' + pad(s) + ']';
+    }
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    // Build 50 unique lines then duplicate for seamless loop
+    var lines = [];
+    for (var i = 0; i < 50; i++) {
+      lines.push(nextTs() + ' ' + pool[Math.floor(Math.random() * pool.length)]);
+    }
+    var doubled = lines.concat(lines);
+    var frag = document.createDocumentFragment();
+    doubled.forEach(function (text) {
+      var el = document.createElement('div');
+      el.className = 'log-line';
+      el.textContent = text;
+      frag.appendChild(el);
+    });
+    track.appendChild(frag);
+  })();
+
   // ── Tools grid ──────────────────────────────────────────────
   const SI = 'https://cdn.simpleicons.org/';
   const WH = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="5" r="2.5"/><path d="M7.3 18.2 13 12a4 4 0 0 1 5.7 0"/><path d="M5 16.5V10a4 4 0 0 1 4-4h5.5"/></svg>';
 
   const tools = [
-    { name: "GHL",            glyph: 'text', val: "GHL" },
-    { name: "Zapier",         glyph: 'img',  src: SI + 'zapier/ffffff' },
-    { name: "Make",           glyph: 'img',  src: SI + 'make/ffffff' },
-    { name: "Webhooks",       glyph: 'svg',  val: WH },
-    { name: "Airtable",       glyph: 'img',  src: SI + 'airtable/ffffff' },
-    { name: "Claude Code",    glyph: 'img',  src: SI + 'anthropic/ffffff' },
-    { name: "ActiveCampaign", glyph: 'svg',  val: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/><path d="M2 17l5-5"/><path d="M22 17l-5-5"/></svg>' },
-    { name: "Stripe",         glyph: 'img',  src: SI + 'stripe/ffffff' },
-    { name: "Typeform",       glyph: 'img',  src: SI + 'typeform/ffffff' },
-    { name: "Fillout",        glyph: 'text', val: "F" },
-    { name: "ClickUp",        glyph: 'img',  src: SI + 'clickup/ffffff' },
-    { name: "Skool",          glyph: 'text', val: "Sk" },
-    { name: "Fireflies.ai",   glyph: 'text', val: "Ff" },
-    { name: "ManyChat",       glyph: 'svg',  val: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="11" r=".5" fill="currentColor"/><circle cx="12" cy="11" r=".5" fill="currentColor"/><circle cx="15" cy="11" r=".5" fill="currentColor"/></svg>' },
-    { name: "Google Sheets",  glyph: 'img',  src: SI + 'googlesheets/ffffff' },
-    { name: "Zoho CRM",       glyph: 'img',  src: SI + 'zoho/ffffff' },
+    { name: "GHL",            glyph: 'text', val: "GHL",  anim: 'bounce' },
+    { name: "Zapier",         glyph: 'img',  src: SI + 'zapier/ffffff',        anim: 'bounce' },
+    { name: "Make",           glyph: 'img',  src: SI + 'make/ffffff',          anim: 'wobble' },
+    { name: "Webhooks",       glyph: 'svg',  val: WH,                          anim: 'shake'  },
+    { name: "Airtable",       glyph: 'img',  src: SI + 'airtable/ffffff',      anim: 'bounce' },
+    { name: "Claude Code",    glyph: 'img',  src: SI + 'anthropic/ffffff',     anim: 'pulse'  },
+    { name: "ActiveCampaign", glyph: 'svg',  val: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/><path d="M2 17l5-5"/><path d="M22 17l-5-5"/></svg>', anim: 'float' },
+    { name: "Stripe",         glyph: 'img',  src: SI + 'stripe/ffffff',        anim: 'float'  },
+    { name: "Typeform",       glyph: 'img',  src: SI + 'typeform/ffffff',      anim: 'bounce' },
+    { name: "Fillout",        glyph: 'text', val: "F",    anim: 'bounce' },
+    { name: "ClickUp",        glyph: 'img',  src: SI + 'clickup/ffffff',       anim: 'bounce' },
+    { name: "Skool",          glyph: 'text', val: "Sk",   anim: 'float'  },
+    { name: "Fireflies.ai",   glyph: 'text', val: "Ff",   anim: 'pulse'  },
+    { name: "ManyChat",       glyph: 'svg',  val: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="11" r=".5" fill="currentColor"/><circle cx="12" cy="11" r=".5" fill="currentColor"/><circle cx="15" cy="11" r=".5" fill="currentColor"/></svg>', anim: 'bounce' },
+    { name: "Google Sheets",  glyph: 'img',  src: SI + 'googlesheets/ffffff',  anim: 'bounce' },
+    { name: "Zoho CRM",       glyph: 'img',  src: SI + 'zoho/ffffff',          anim: 'float'  },
   ];
 
   function renderGlyph(t) {
@@ -1304,11 +1501,13 @@
   }
 
   const grid = document.getElementById('toolsGrid');
-  tools.forEach((t, i) => {
+  // Render twice for seamless infinite loop
+  [...tools, ...tools].forEach((t, i) => {
     const el = document.createElement('div');
-    el.className = 'tool reveal';
+    el.className = 'tool';
     el.setAttribute('role', 'listitem');
-    el.dataset.d = String((i % 5) + 1);
+    el.dataset.anim = t.anim;
+    if (i >= tools.length) el.setAttribute('aria-hidden', 'true');
     el.innerHTML = '<div class="glyph" aria-hidden="true">' + renderGlyph(t) + '</div><div class="tname">' + t.name + '</div>';
     grid.appendChild(el);
   });
